@@ -1,0 +1,12 @@
+# Activity logs and archived logs
+activity.log
+activity-*.log.gz
+#log_archive/
+
+# Backup files (binary archives)
+#backups/
+*.tar.gz
+
+# Generated reports
+#reports/
+health_report_*.txt

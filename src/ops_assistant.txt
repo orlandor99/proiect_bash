@@ -1,0 +1,88 @@
+Specificații Proiect: "Ops-Assistant" – Sistem de Automatizare, Audit și
+Servicii Linux
+1. Introducere
+Proiectul vizează implementarea unui utilitar de administrare în linie de comandă (CLI), dezvoltat în Bash. Soluția Ops-Assistant este
+concepută pentru a automatiza monitorizarea resurselor, gestionarea backup-ului, auditul de securitate și verificarea stării serviciilor
+esențiale pe un server Linux.
+2. Arhitectura Sistemului
+Proiectul trebuie să respecte o structură de directoare modulară. Această organizare asigură că scriptul rămâne curat și că datele
+(rapoartele și backup-urile) nu se amestecă cu codul sursă:
+src/ : Conține scriptul principal executabil (manager.sh).
+config/ : Găzduiește fișierul settings.conf (unde se definesc variabilele globale).
+backups/ : Locul unde vor fi arhivate fișierele de siguranță.
+reports/ : Locul unde vor fi salvate rapoartele de diagnostic.
+3. Cerințe Funcționale Detaliate
+A. Modulul de Diagnostic și Monitorizare (--health)
+Monitorizare Disc: Se va verifica procentul de utilizare a partiției root (/). Din rezultatul comenzii df -h, scriptul trebuie să extragă doar
+cifra procentuală (ex: 85). Această cifră va fi comparată cu o variabilă de prag (Threshold) (ex: DISK_THRESHOLD=80). Dacă valoarea
+reală este mai mare, raportul va marca linia cu textul [WARNING].
+Monitorizare Memorie: Se vor colecta valorile pentru memoria RAM totală, utilizată și liberă.
+Generarea Raportului: Datele nu se vor afișa doar în terminal, ci vor fi scrise într-un fișier nou în reports/, cu un nume care include data
+și ora (timestamp) pentru a evita suprascrierea rapoartelor vechi.
+B. Modulul de Arhivare și Securizare (--backup)
+Procesul de Backup: Toate fișierele din folderul config/ vor fi grupate într-o arhivă comprimată .tar.gz.
+Securitate (Permisiuni): Imediat după crearea arhivei, scriptul trebuie să aplice comanda chmod 600 .
+C. Modulul de Status Servicii (--services)
+Validare Servicii: Scriptul va verifica dacă anumite servicii sunt în starea "active".
+Logică: Pentru fiecare serviciu din listă, scriptul va afișa în terminal dacă acesta rulează sau dacă este oprit.
+D. Modulul de Audit de Securitate (--security)
+Audit Utilizatori: Scriptul va filtra fișierul /etc/passwd pentru a identifica utilizatorii cu acces shell.
+Ultimii Logați: Se vor afișa ultimele 5 accesări ale sistemului (comanda last ).
+E. Gestiunea Jurnalelor și Rotația Log-urilor
+Toate operațiunile sunt scrise în activity.log.
+Rotația Log-urilor: se verifică dimensiunea fișierului de loguri și se arhivează când depășește 10MB.
+4. Explicații privind Implementarea
+🔹 Gestiunea Configurației
+Scriptul nu trebuie să conțină valori fixe (hardcodate) pentru parametri precum praguri (Thresholds) sau căi de directoare. Toate aceste
+valori vor fi definite într-un fișier extern de configurare ( settings.conf ), care va fi încărcat în script folosind comanda:
+source ../config/settings.conf
+Această abordare permite modificarea comportamentului aplicației fără a altera codul sursă, facilitând mentenanța și reutilizarea.
+🔹 Idempotență
+Scriptul trebuie să fie proiectat astfel încât să poată fi rulat de mai multe ori fără a produce erori sau efecte nedorite. Este obligatoriu ca
+scriptul să verifice existența directoarelor necesare (precum backups/ și reports/ ) și să le creeze automat dacă acestea nu există.
+🔹 Coduri de Ieșire (Exit Codes)
+Scriptul trebuie să returneze coduri de stare standard pentru a semnala rezultatul execuției:
+exit 0 — indică faptul că execuția s-a încheiat cu succes
+exit 1 — indică apariția unei erori critice (de exemplu: lipsa fișierului de configurare sau lipsa permisiunilor necesare)
+Aceste coduri sunt importante pentru integrarea scriptului în alte procese automate.
+5. Exemple Explicite de Utilizare
+Scenariul 1: Verificarea Resurselor (--health)
+$ ./manager.sh --health
+[INFO] Se inițializează auditul de sistem...
+[WARNING] Utilizarea discului a depășit pragul(Threshold) (82% utilizat).
+[INFO] Raport generat cu succes: ../reports/sys_report_20260502_1430.txt
+Scenariul 2: Crearea unui Backup Securizat (--backup)
+$ ./manager.sh --backup
+[INFO] Se pregătește backup-ul...
+[SUCCESS] Arhiva config_backup_20260502.tar.gz a fost creată.
+[INFO] Permisiuni setate la 600
+Scenariul 3: Verificarea Serviciilor (--services)
+$ ./manager.sh --services
+[INFO] Verificare servicii critice...
+Service: SSHD - Status: ACTIVE
+Service: CRON - Status: ACTIVE
+Service: NGINX - Status: INACTIVE (Atentie!)
+Scenariul 4: Audit de Securitate (--security)
+$ ./manager.sh --security
+[INFO] Se inițializează auditul de securitate...
+Utilizatori identificați cu shell activ (/bin/bash):
+- root
+- student
+Ultimele 5 sesiuni de accesare a sistemului (last):
+student pts/0 192.168.1.5 Sat May 2 17:10 still logged in
+... (afișare filtrată conform cerinței)
+[SUCCESS] Datele de securitate au fost salvate în activity.log.
+Scenariul 5: Rularea tuturor modulelor (--all)
+$ ./manager.sh --all
+[INFO] Pornire flux complet...
+1. Audit Health... OK
+2. Backup Config... OK
+3. Audit Security... OK
+4. Service Check... OK
+[SUCCESS] Toate modulele au fost executate.
+6. Documentația Proiectului (README.md)
+Descriere: Ce problemă rezolvă acest tool?
+Ghid de instalare: Pașii necesari.
+Configurare: Cum se editează settings.conf.
+Exemple de comenzi: Listă CLI.
+Structura folderelor: Vizualizare ierarhie.
